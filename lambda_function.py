@@ -1,49 +1,59 @@
 from __future__ import print_function
 import subprocess
 
-#Variables
-tmpDir = "/tmp/inputSource"
-pubDir = tmpDir + "/public"
+# Constants
+TMP_DIR = "/tmp/input-source"
+PUB_DIR = TMP_DIR + "/public"
 
 
 def lambda_handler(event, context):
-    siteGen(event)
+    """Execute Lambda."""
+    site_gen(event)
     return 'Site Generated!'
 
-def siteGen(event):
+
+def site_gen(event):
+    """Generate the Hugo site."""
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
         key = record['s3']['object']['key']
 
-    #Create directory structure
-    subprocess.run(["mkdir", "-p", tmpDir + "/static"])
-    inputBucket = bucket
-    dstBucket = inputBucket[6:]
+    # Create directory structure
+    subprocess.run(["mkdir", "-p", TMP_DIR + "/static"])
 
-    print('\n\nRunning Hugo generation on bucket: ' + inputBucket)
-    print('Destination bucket will be: ' + dstBucket);
-    download_input(inputBucket, tmpDir)
-    runHugo()
-    upload_website(dstBucket, pubDir)
+    input_bucket = bucket
+    dst_bucket = input_bucket[6:]
 
-def download_input(inputBucket, tmpDir):
+    print('\n\nRunning Hugo generation on bucket: ' + input_bucket)
+    print('Destination bucket will be: ' + dst_bucket)
+    download_input(input_bucket, TMP_DIR)
+    run_hugo()
+    upload_website(dst_bucket, PUB_DIR)
+
+def download_input(input_bucket, tmp_dir):
+    """Check for object in input bucket, a directory called 'hugo'."""
     print('Downloading Input!\n')
-    command = ["./aws s3 sync s3://" + inputBucket + "/hugo/" + " " + tmpDir + "/"]
+
     try:
-        subprocess.check_output(command,shell=True,stderr=subprocess.STDOUT)
+        command = ["./aws s3 sync s3://" + input_bucket + "/hugo/" + " " + "tmp_dir"]
+        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
         quit('Error downloading from input bucket')
 
-def runHugo():
-    print('Running Hugo!\n')
-    subprocess.run(["./hugo", "-v", "--source=" + tmpDir, "--destination=" + pubDir])
 
-def upload_website(dstBucket, pubDir):
+def run_hugo():
+    """Build Hugo site."""
+    print('Running Hugo!\n')
+    subprocess.run(["./hugo", "-v", "--source=" + TMP_DIR, "--destination=" + PUB_DIR])
+
+
+def upload_website(dst_bucket, pub_dir):
+    """Upload Hugo site in 'public' directory of destination bucket."""
     print('Publishing site!\n')
-    command = ["./aws s3 sync --acl public-read --delete" + " " + pubDir + "/" + " " + "s3://" + dstBucket + "/"]
+    command = ["./aws s3 sync --acl public-read --delete" + " " + pub_dir + "/" + " " + "s3://" + dst_bucket + "/"]
     try:
-        subprocess.check_output(command,shell=True,stderr=subprocess.STDOUT)
+        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
         quit('Error uploading site')
