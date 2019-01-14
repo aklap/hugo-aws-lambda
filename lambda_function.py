@@ -1,4 +1,3 @@
-from __future__ import print_function
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import logging
@@ -8,7 +7,9 @@ import re
 # Constants
 TMP_DIR = "/tmp/input-source"
 PUB_DIR = TMP_DIR + "/public"
-
+# LOGGER, provides more info than print()
+LOGGER = logging.getLogger()
+LOGGER.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
     """Execute Lambda."""
@@ -27,15 +28,15 @@ def site_gen(event):
     input_bucket = bucket
     dst_bucket = input_bucket[6:]
 
-    print('\n\nRunning Hugo generation on bucket: ' + input_bucket)
-    print('Destination bucket will be: ' + dst_bucket)
+    LOGGER.info('\n\nRunning Hugo generation on bucket: ' + input_bucket + '\n')
+    LOGGER.info('\n\nDestination bucket will be: ' + dst_bucket + '\n')
     download_input(input_bucket, TMP_DIR)
     run_hugo()
     upload_website(dst_bucket, PUB_DIR)
 
 def download_input(input_bucket, tmp_dir):
     """Check for object in input bucket, a directory called 'hugo'."""
-    print('Downloading Input!\n')
+    LOGGER.info('Downloading Input!\n')
 
     try:
         command = ["./aws s3 sync s3://" + input_bucket + "/hugo/" + " " + "tmp_dir"]
@@ -47,13 +48,13 @@ def download_input(input_bucket, tmp_dir):
 
 def run_hugo():
     """Build Hugo site."""
-    print('Running Hugo!\n')
+    LOGGER.info('Running Hugo!\n')
     subprocess.run(["./hugo", "-v", "--source=" + TMP_DIR, "--destination=" + PUB_DIR])
 
 
 def upload_website(dst_bucket, pub_dir):
     """Upload Hugo site in 'public' directory of destination bucket."""
-    print('Publishing site!\n')
+    LOGGER.info('Publishing site!\n')
     command = ["./aws s3 sync --acl public-read --delete" + " " + pub_dir + "/" + " " + "s3://" + dst_bucket + "/"]
     try:
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
