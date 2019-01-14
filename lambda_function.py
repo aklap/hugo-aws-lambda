@@ -16,7 +16,6 @@ def site_gen(event):
     """Generate the Hugo site."""
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
-        key = record['s3']['object']['key']
 
     # Create directory structure
     subprocess.run(["mkdir", "-p", TMP_DIR + "/static"])
