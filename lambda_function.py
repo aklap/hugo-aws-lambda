@@ -49,7 +49,16 @@ def download_input(input_bucket, tmp_dir):
 def run_hugo():
     """Build Hugo site."""
     LOGGER.info('Running Hugo!\n')
-    subprocess.run(["./hugo", "-v", "--source=" + TMP_DIR, "--destination=" + PUB_DIR])
+    cmd = ['./hugo', '-v', '--source=' + TMP_DIR, '--destination=' + PUB_DIR]
+    p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+    formatted_output = p.stdout.read().decode('utf-8')
+    # Read output of `hugo`
+    if re.search("warning", formatted_output, re.IGNORECASE):
+        LOGGER.warning('Hugo build warnings:\n %s \n', formatted_output)
+    elif re.search("error", formatted_output, re.IGNORECASE):
+        LOGGER.error('Hugo build errors:\n %s \n', formatted_output)
+    elif re.search("info", formatted_output):
+        LOGGER.info('Hugo info on build:\n %s \n', formatted_output)
 
 
 def upload_website(dst_bucket, pub_dir):
