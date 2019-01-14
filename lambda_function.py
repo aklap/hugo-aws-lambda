@@ -1,5 +1,9 @@
 from __future__ import print_function
 import subprocess
+from subprocess import Popen, PIPE, STDOUT
+import logging
+import re
+
 
 # Constants
 TMP_DIR = "/tmp/input-source"
