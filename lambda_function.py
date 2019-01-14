@@ -31,8 +31,22 @@ def site_gen(event):
     LOGGER.info('\n\nRunning Hugo generation on bucket: ' + input_bucket + '\n')
     LOGGER.info('\n\nDestination bucket will be: ' + dst_bucket + '\n')
     download_input(input_bucket, TMP_DIR)
+    check_dir(input_bucket, TMP_DIR)
     run_hugo()
     upload_website(dst_bucket, PUB_DIR)
+
+
+def check_dir(input_bucket, tmp_dir):
+    """Check for object in input bucket, a directory called 'hugo'."""
+    LOGGER.info('Checking for directory, hugo!')
+
+    try:
+        command = ['./aws s3 ls s3://' + input_bucket + ' | grep hugo']
+        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+        print("Did you sync to a folder called 'hugo' in the input bucket?")
+
 
 def download_input(input_bucket, tmp_dir):
     """Check for object in input bucket, a directory called 'hugo'."""
