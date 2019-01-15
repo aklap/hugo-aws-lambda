@@ -12,6 +12,7 @@ PUB_DIR = TMP_DIR + "/public"
 LOGGER = logging.getLogger()
 LOGGER.setLevel(logging.INFO)
 
+
 def lambda_handler(event, context):
     """Execute Lambda."""
     site_gen(event)
@@ -31,22 +32,43 @@ def site_gen(event):
 
     LOGGER.info('\n\nRunning Hugo generation on bucket: ' + input_bucket + '\n')
     LOGGER.info('\n\nDestination bucket will be: ' + dst_bucket + '\n')
+
     download_input(input_bucket, TMP_DIR)
-    check_dir(input_bucket, TMP_DIR)
+    check_hugo_dir(input_bucket, TMP_DIR)
+    check_content_dir(input_bucket, TMP_DIR)
     run_hugo()
     upload_website(dst_bucket, PUB_DIR)
 
 
-def check_dir(input_bucket, tmp_dir):
-    """Check for object in input bucket, a directory called 'hugo'."""
-    LOGGER.info('Checking for directory, hugo!')
+def check_hugo_dir(input_bucket, tmp_dir):
+    """Check for a directory called 'hugo'."""
+    LOGGER.info("Checking 'hugo' directory!")
 
     try:
         command = ['./aws s3 ls s3://' + input_bucket + ' | grep hugo']
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
-        print("Did you sync to a folder called 'hugo' in the input bucket?")
+        # TODO: Better to change this to checking for empty bytestring because a return code of 1 is for any general error
+        if int(e.returncode) == 1:
+            LOGGER.error("No directory called 'hugo' found!")
+
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output.decode('utf-8')))
+
+
+def check_content_dir(input_bucket, tmp_dir):
+    """Check for a directory called 'content' with at least 1 file."""
+    LOGGER.info("Checking 'content' directory!")
+
+    try:
+        # Should return at least 1 result
+        cmd = ['./aws s3 ls s3://' + input_bucket + '/hugo/content/ | grep content']
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        # TODO: Better to change this to checking for empty bytestring because a return code of 1 is for any general error
+        if int(e.returncode) == 1:
+            LOGGER.error("No directory called 'content' and/or no files in content!")
+
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output.decode('utf-8')))
 
 
 def download_input(input_bucket, tmp_dir):
@@ -54,10 +76,10 @@ def download_input(input_bucket, tmp_dir):
     LOGGER.info('Downloading Input!\n')
 
     try:
-        command = ["./aws s3 sync s3://" + input_bucket + "/hugo/" + " " + "tmp_dir"]
+        command = ["./aws s3 sync s3://" + input_bucket + "/hugo/ " + tmp_dir + "/"]
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output.decode('utf-8')))
         quit('Error downloading from input bucket')
 
 
