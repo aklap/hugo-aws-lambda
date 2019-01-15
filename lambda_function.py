@@ -1,3 +1,4 @@
+"""AWS Lambda function for running Hugo static website."""
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import logging
